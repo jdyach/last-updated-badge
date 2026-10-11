@@ -1,0 +1,7 @@
+.lub-badge {
+    font-size: 0.875em;
+    color: #50575e;
+    font-style: italic;
+    margin: 0 0 1.25em;
+}
+.lub-badge .lub-time { font-style: inherit; }

@@ -1,0 +1,48 @@
+{
+    "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+    "meta": {
+        "title": "Last Updated Badge demo",
+        "description": "Creates a post published months ago and revised recently, so the badge appears, plus an unrevised post where it does not.",
+        "author": "jdyach",
+        "categories": [
+            "Plugin"
+        ]
+    },
+    "landingPage": "/updated-post-demo/",
+    "preferredVersions": {
+        "php": "8.3",
+        "wp": "latest"
+    },
+    "features": {
+        "networking": true
+    },
+    "login": true,
+    "steps": [
+        {
+            "step": "installTheme",
+            "themeData": {
+                "resource": "git:directory",
+                "url": "https://github.com/jdyach/fieldnote",
+                "ref": "main"
+            },
+            "options": {
+                "activate": true
+            }
+        },
+        {
+            "step": "installPlugin",
+            "pluginData": {
+                "resource": "git:directory",
+                "url": "https://github.com/jdyach/last-updated-badge",
+                "ref": "main"
+            },
+            "options": {
+                "activate": true
+            }
+        },
+        {
+            "step": "runPHP",
+            "code": "<?php\n/**\n * Demo content for the WordPress Playground \"Try it live\" link.\n *\n * Runs once inside Playground: blueprint.json embeds this file (rebuild it\n * with `php bin/build-blueprint.php`). Creates a post published months ago and revised recently, so the badge appears, plus an unrevised post where it does not.\n *\n * Not loaded by the plugin.\n *\n * @package Last_Updated_Badge\n */\n\nrequire_once '/wordpress/wp-load.php';\nrequire_once ABSPATH . 'wp-admin/includes/image.php';\n\nwp_set_current_user( 1 );\n\n// Start from a clean site: remove the default \"Hello world!\" post and sample page.\nforeach ( get_posts( array( 'post_type' => array( 'post', 'page' ), 'numberposts' => -1, 'post_status' => 'any' ) ) as $demo_old ) {\n\twp_delete_post( $demo_old->ID, true );\n}\n\nupdate_option( 'blogname', 'Last Updated Badge' );\nupdate_option( 'blogdescription', 'Live demo' );\nupdate_option( 'permalink_structure', '/%postname%/' );\n\n/**\n * Upload one of the Fieldnote theme's images and return its attachment ID.\n *\n * @param string $name Image file name without extension.\n * @return int Attachment ID, or 0 when the theme image is unavailable.\n */\nfunction demo_theme_image( $name ) {\n\t$source = get_theme_file_path( \"assets/images/$name.webp\" );\n\tif ( ! file_exists( $source ) ) {\n\t\treturn 0;\n\t}\n\t$upload = wp_upload_bits( \"$name.webp\", null, file_get_contents( $source ) );\n\tif ( ! empty( $upload['error'] ) ) {\n\t\treturn 0;\n\t}\n\t$id = wp_insert_attachment(\n\t\tarray(\n\t\t\t'post_mime_type' => 'image/webp',\n\t\t\t'post_title'     => $name,\n\t\t\t'post_status'    => 'inherit',\n\t\t),\n\t\t$upload['file']\n\t);\n\twp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $upload['file'] ) );\n\treturn $id;\n}\n\n/**\n * A long article in block markup: H2 sections with H3 subsections.\n *\n * @param array $sections Section titles.\n * @param int   $paras    Paragraphs per section.\n * @return string Block markup.\n */\nfunction demo_article( $sections, $paras = 2 ) {\n\t$text = 'A good website is less about the launch and more about the years after it. The people editing it next need clear patterns, sensible defaults and documentation they will actually read. Small decisions made early, like naming, structure and what is configurable, decide how easy every later change will be.';\n\t$html = '';\n\tforeach ( $sections as $section ) {\n\t\t$html .= '<!-- wp:heading --><h2 class=\"wp-block-heading\">' . esc_html( $section ) . '</h2><!-- /wp:heading -->';\n\t\tfor ( $i = 0; $i < $paras; $i++ ) {\n\t\t\t$html .= '<!-- wp:paragraph --><p>' . $text . '</p><!-- /wp:paragraph -->';\n\t\t}\n\t\t$html .= '<!-- wp:heading {\"level\":3} --><h3 class=\"wp-block-heading\">' . esc_html( $section ) . ' checklist</h3><!-- /wp:heading -->';\n\t\t$html .= '<!-- wp:paragraph --><p>' . $text . '</p><!-- /wp:paragraph -->';\n\t}\n\treturn $html;\n}\n\n/**\n * Insert a published post or page.\n *\n * @param array $args wp_insert_post() arguments.\n * @return int Post ID.\n */\nfunction demo_post( $args ) {\n\treturn wp_insert_post( array_merge( array( 'post_status' => 'publish' ), $args ) );\n}\n\n/**\n * Write a small demo-only must-use plugin. These files exist only inside\n * the Playground demo; they are not part of the plugin.\n *\n * @param string $name File name.\n * @param string $code PHP source.\n */\nfunction demo_mu_plugin( $name, $code ) {\n\twp_mkdir_p( WPMU_PLUGIN_DIR );\n\tfile_put_contents( trailingslashit( WPMU_PLUGIN_DIR ) . $name, $code );\n}\n\n/** Skip the block editor's welcome guide so visitors land straight on the content. */\nfunction demo_skip_welcome_guide( $extra = array() ) {\n\tupdate_user_meta(\n\t\t1,\n\t\t$GLOBALS['wpdb']->get_blog_prefix() . 'persisted_preferences',\n\t\tarray_merge(\n\t\t\tarray(\n\t\t\t\t'core/edit-post' => array( 'welcomeGuide' => false ),\n\t\t\t\t'core'           => array( 'welcomeGuide' => false ),\n\t\t\t\t'_modified'      => gmdate( 'c' ),\n\t\t\t),\n\t\t\t$extra\n\t\t)\n\t);\n}\n\n$updated = demo_post(\n\tarray(\n\t\t'post_title'   => 'A post that was revised recently',\n\t\t'post_name'    => 'updated-post-demo',\n\t\t'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-8 months' ) ),\n\t\t'post_content' => '<!-- wp:paragraph {\"fontSize\":\"large\"} --><p class=\"has-large-font-size\">This post was published months ago and edited recently, so the \"Last updated\" badge appears. Posts that were never edited after publishing do not get one. Change the label, date format and position under <strong>Settings → Last Updated Badge</strong>.</p><!-- /wp:paragraph -->' . demo_article( array( 'What changed', 'Why we updated it' ), 1 ),\n\t)\n);\n// Record a recent modification date (wp_insert_post would set it to \"now\" anyway, but be explicit).\nglobal $wpdb;\n$wpdb->update(\n\t$wpdb->posts,\n\tarray(\n\t\t'post_modified'     => current_time( 'mysql' ),\n\t\t'post_modified_gmt' => current_time( 'mysql', true ),\n\t),\n\tarray( 'ID' => $updated )\n);\n$never = demo_post(\n\tarray(\n\t\t'post_title'   => 'A post that was never revised',\n\t\t'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-3 months' ) ),\n\t\t'post_content' => '<!-- wp:paragraph --><p>No badge here: this post has not been modified since it was published.</p><!-- /wp:paragraph -->',\n\t)\n);\n$wpdb->update(\n\t$wpdb->posts,\n\tarray(\n\t\t'post_modified'     => get_post_field( 'post_date', $never ),\n\t\t'post_modified_gmt' => get_post_field( 'post_date_gmt', $never ),\n\t),\n\tarray( 'ID' => $never )\n);\nclean_post_cache( $updated );\nclean_post_cache( $never );\n"
+        }
+    ]
+}

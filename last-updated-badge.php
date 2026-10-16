@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/jdyach/last-updated-badge
  * Description:       Displays a "Last updated: [date]" notice on posts. Configurable date format, display position, and which post types to show it on.
  * Version:           1.0.0
- * Author:            Jacqui Dyachenko
+ * Author:            Jacqui Dyach
  * Author URI:        https://jacquid.com
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
